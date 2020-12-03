@@ -1,21 +1,22 @@
 from pytube import YouTube
 from .utils import customizemessage, bytetomb
-from discord import File, Embed
+from discord import File
 from YTDown.Drive.drive import uploadfile
 from YTDown.Drive.db.db import DB_VIDEO_FOLDER_ID
 import asyncio
 
 
-class Video:
-    def __init__(self, message, videourl, flags, periodlist, query, currentloop=None):
+class VideoQuery:
+    def __init__(self, message, videourl, flags, periodlist, query, currentloop):
         self._message = message
-
+        self._video_url = videourl
         self._flags = flags
         self._period_list = periodlist
         self._query = query
         self._current_loop = currentloop
 
-        self._video_url = videourl
+        # filter vars
+
         self._res = None
         self._output_type = None
         self._exact_video = None
@@ -24,11 +25,11 @@ class Video:
 
         self._setflags()
 
-        self._video = YouTube(videourl)
+        self._yt_video = YouTube(self._video_url)
 
-        self._video_list = self._video.streams
-        self._thumbnail = self._video.thumbnail_url
-        self._video_title = self._video.title
+        self._video_list = self._yt_video.streams
+        self._thumbnail = self._yt_video.thumbnail_url
+        self._video_title = self._yt_video.title
 
         self._filterlist()
 
