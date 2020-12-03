@@ -1,28 +1,28 @@
 import asyncio
-from YTDown.Video.video import Video
+from YTDown.Video.video import VideoQuery
 from threading import Thread
 
 
 # video functions
 
-def fetchyoutubedata(query):
+def fetchyoutubvideoedata(query):
     properties = query.getproperties()
     querylist = properties['query_list']
     if querylist.checkquery(query):
-        print("creating video")
-        video = Video(
+        print("creating video data")
+        video = VideoQuery(
             properties['message'],
             properties['url'],
             properties['flags'],
             properties['period_list'],
             query,
-            currentloop=properties['current_loop']
+            properties['current_loop']
         )
 
         if not query.iscancelled():
             print("hello")
             query.setproperty('video', video)
-            print("setting video")
+            print("seraching video")
 
             if video.getlistlength() > 0:
                 query.setqueryfunction(getvideoorder)
@@ -50,3 +50,30 @@ def getvideoorder(query):
 
         finally:
             return None
+
+
+# subtitle functions
+
+def fetchyoutubesubdata(query):
+    properties = query.getproperties()
+    querylist = properties['query_list']
+    if querylist.checkquery(query):
+        print("creating subtitle data")
+        video = Video(
+            properties['message'],
+            properties['url'],
+            properties['flags'],
+            properties['period_list'],
+            query,
+            currentloop=properties['current_loop']
+        )
+
+        if not query.iscancelled():
+            print("hello")
+            query.setproperty('video', video)
+            print("searching video")
+
+            if video.getlistlength() > 0:
+                query.setqueryfunction(getvideoorder)
+
+            video.showinfo()

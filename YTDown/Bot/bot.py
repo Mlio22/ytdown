@@ -24,7 +24,7 @@ async def video(ctx, url, *flags):
     print("accepting video task")
     message = ctx.message
 
-    def fetchdata(currentloop):
+    def fetchvideodata(currentloop):
         # checking user in query
         query = query_list.checkuserquery(message)
         if query:
@@ -43,11 +43,31 @@ async def video(ctx, url, *flags):
             startfunction=fetchyoutubedata
         )
 
-    thread = Thread(target=fetchdata, args=(loop,), daemon=True)
+    thread = Thread(target=fetchvideodata, args=(loop,), daemon=True)
     thread.start()
 
-    print("thread request started")
+@client.command()
+async def sub(ctx):
+    print("accepting subtitle task")
+    message = ctx.message
 
+    def fetchsubdata():
+        query = query_list.checkuserquery()
+        if query:
+            query_list.deletequery(query)
+
+        Query(
+            message.author,
+            properties={
+                'period_list': period_list,
+                'query_list': query_list,
+                'message': message,
+                'url': url,
+                'flags': flags,
+                'current_loop': currentloop
+            },
+            startfunction=fetchsubdata()
+        )
 
 # cancel previous query
 @client.command()
