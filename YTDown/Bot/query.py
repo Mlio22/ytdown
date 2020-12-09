@@ -43,6 +43,7 @@ class Query:
             finally:
                 None
 
+
 class Queries:
     def __init__(self):
         self._queries = []

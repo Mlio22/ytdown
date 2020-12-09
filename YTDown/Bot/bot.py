@@ -1,8 +1,7 @@
 from discord import Game
 from discord.ext.commands import Bot
-from YTDown.Video.video import Video
 from .query import Query, Queries
-from .command import getvideoorder, fetchyoutubedata
+from .fetchcommand import fetchyoutubevideoedata, fetchyoutubesubdata
 from YTDown.Drive.period import PeriodList
 import asyncio
 from threading import Thread
@@ -40,19 +39,20 @@ async def video(ctx, url, *flags):
                 'flags': flags,
                 'current_loop': currentloop
             },
-            startfunction=fetchyoutubedata
+            startfunction=fetchyoutubevideoedata
         )
 
-    thread = Thread(target=fetchvideodata, args=(loop,), daemon=True)
+    thread = Thread(target=fetchvideodata(loop), args=(loop,), daemon=True)
     thread.start()
 
+
 @client.command()
-async def sub(ctx):
+async def sub(ctx, url, *flags):
     print("accepting subtitle task")
     message = ctx.message
 
-    def fetchsubdata():
-        query = query_list.checkuserquery()
+    def fetchsubdata(currentloop):
+        query = query_list.checkuserquery(message)
         if query:
             query_list.deletequery(query)
 
@@ -66,8 +66,12 @@ async def sub(ctx):
                 'flags': flags,
                 'current_loop': currentloop
             },
-            startfunction=fetchsubdata()
+            startfunction=fetchyoutubesubdata
         )
+
+    thread = Thread(target=fetchsubdata(loop), args=(loop,), daemon=True)
+    thread.start()
+
 
 # cancel previous query
 @client.command()
@@ -101,7 +105,6 @@ async def on_message(message):
             query.addthread(thread)
 
             thread.start()
-
 
 
 @client.event

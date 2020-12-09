@@ -1,34 +1,4 @@
-import asyncio
-from YTDown.Video.video import VideoQuery
 from threading import Thread
-
-
-# video functions
-
-def fetchyoutubvideoedata(query):
-    properties = query.getproperties()
-    querylist = properties['query_list']
-    if querylist.checkquery(query):
-        print("creating video data")
-        video = VideoQuery(
-            properties['message'],
-            properties['url'],
-            properties['flags'],
-            properties['period_list'],
-            query,
-            properties['current_loop']
-        )
-
-        if not query.iscancelled():
-            print("hello")
-            query.setproperty('video', video)
-            print("seraching video")
-
-            if video.getlistlength() > 0:
-                query.setqueryfunction(getvideoorder)
-
-            video.showinfo()
-
 
 # get the exact video that user wants
 def getvideoorder(query):
@@ -52,28 +22,34 @@ def getvideoorder(query):
             return None
 
 
-# subtitle functions
-
-def fetchyoutubesubdata(query):
+def getlangfromuser(query):
     properties = query.getproperties()
-    querylist = properties['query_list']
-    if querylist.checkquery(query):
-        print("creating subtitle data")
-        video = Video(
-            properties['message'],
-            properties['url'],
-            properties['flags'],
-            properties['period_list'],
-            query,
-            currentloop=properties['current_loop']
-        )
+    if properties['query_list'].checkquery(query):
+        sub_query = properties['sub']
+        message_text = properties['message'].content
 
-        if not query.iscancelled():
-            print("hello")
-            query.setproperty('video', video)
-            print("searching video")
+        try:
+            print("here")
+            message_text = int(message_text) - 1
+            if message_text <= sub_query.getlanglength():
+                print("here")
+                sub_query.setlangfromuser(message_text)
+                sub_query.checksubrequirements()
+        finally:
+            return None
 
-            if video.getlistlength() > 0:
-                query.setqueryfunction(getvideoorder)
 
-            video.showinfo()
+def gettypefromuser(query):
+    properties = query.getproperties()
+    if properties['query_list'].checkquery(query):
+        sub_query = properties['sub']
+        message_text = properties['message'].content
+
+        try:
+            message_text = int(message_text) - 1
+            if message_text <= 3:
+                sub_query.settypefromuser(message_text)
+                print('downloading')
+                sub_query.checksubrequirements()
+        finally:
+            return None
