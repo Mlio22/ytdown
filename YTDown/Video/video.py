@@ -98,7 +98,7 @@ class VideoQuery:
     def upload(self):
         if not self._query.iscancelled():
             print("uploading")
-            if bytetomb(self._exact_video.filesize) <= 1.0:
+            if bytetomb(self._exact_video.filesize) <= 8.0:
                 asyncio.run_coroutine_threadsafe(
                     self._message.channel.send("sending file... please wait"),
                     self._current_loop
