@@ -8,12 +8,8 @@ class SrtSubtitle(Subtitle):
         super().__init__(url)
         if self._isparseable:
             self._convert()
-            self._showsubtitle()
         else:
             self._showurlerror()
-
-    def _showsubtitle(self):
-        print(self._subtitle)
 
     def _convert(self):
         subtitle_counter = 1

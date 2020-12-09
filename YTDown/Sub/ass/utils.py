@@ -26,7 +26,6 @@ def writeevent(pens, wps, wss, segs, time, penid, wpid, wsid, karaokes, isdefaul
 
     seg_items = []
     karaoke_child_iter = 0
-    print("writeevent0")
 
     for seg in segs:
         new_word = ""
@@ -46,7 +45,6 @@ def writeevent(pens, wps, wss, segs, time, penid, wpid, wsid, karaokes, isdefaul
     tagged_seg = ""
     style = ""
 
-    print("writeevent1")
 
     for seg_child in seg_items:
         if isdefault:
@@ -58,7 +56,6 @@ def writeevent(pens, wps, wss, segs, time, penid, wpid, wsid, karaokes, isdefaul
 
             style = "Default Opaque" if is_opaque else "Default"
 
-    print("writeevent2")
 
     [layer, name, marginL, marginR, marginV, effect] = [0, "", 0, 0, 0, ""]
     return "Dialogue: {},{},{},{},{},{},{},{},{},{}\n".format(
@@ -117,7 +114,6 @@ def settime(start, duration):
 
 # styled utilities
 def getfontsize(fs):
-    print("fontsize")
     """
     return from youtube font size to aegisub (proper) font size
     youtube default is 100, aegisub default 15 (defined by myself)
@@ -139,7 +135,6 @@ def getfontsize(fs):
 
 
 def getfonttype(fn):
-    print("font type")
     """
     youtube only supports this following fonts:
     1: Courier New
@@ -201,7 +196,6 @@ def setcolor(deccolor, maxpow):
     HEX (ABCDEF) -> ASS (EFCDAB)
     """
 
-    print(hex_color)
     ass_color = hex_color[4:6] + hex_color[2:4] + hex_color[0:2]
     return "&H" + ass_color.upper() + "&"
 
@@ -273,16 +267,12 @@ def addtag(seg, pen, wp, ws):
         start_tags += "\\u1"
         end_tags += "\\u0"
 
-    print("addtag0")
-    print(pen)
-
     # font property
     if pen['fs'] != 100:
         start_tags += "\\fs{}".format(getfontsize(pen['fs']))
 
     if pen['fn'] != 4:
         start_tags += "\\fn{}".format(getfonttype(pen['fn']))
-    print("addtag1.5")
 
     # font forecolor
     if pen['fc'] != 16777215:
@@ -290,7 +280,6 @@ def addtag(seg, pen, wp, ws):
 
     if pen['fo'] != 254:
         start_tags += "\\1a{}".format(setcolor(abs(pen['fo'] - 254), 1))
-    print("addtag1")
 
     # font backcolor
     if pen['bc'] != 0:
@@ -320,11 +309,11 @@ def addtag(seg, pen, wp, ws):
     if end_tags != "":
         end_tags = '{' + end_tags + '}'
 
-    # print(start_tags)
     return start_tags + seg['text'] + end_tags
 
 
 # debug
 if __name__ == "__main__":
     # getpos(288, 100)
-    print(setcolor(526344, 5))
+    # print(setcolor(526344, 5))
+    pass

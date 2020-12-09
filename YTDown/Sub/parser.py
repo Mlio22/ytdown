@@ -1,6 +1,7 @@
 import requests
 from abc import ABC, abstractmethod
 
+
 class Subtitle(ABC):
     def __init__(self, url):
         self._url = url + "&fmt=json3&xorb=2&xobt=3&xovt=3"
@@ -31,3 +32,7 @@ class Subtitle(ABC):
     @abstractmethod
     def _convert(self):
         pass
+
+    @property
+    def subtitle(self):
+        return self._subtitle

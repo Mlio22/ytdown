@@ -1,9 +1,13 @@
 from pytube import YouTube
+from discord import File
 from YTDown.Sub.ass.AssSubtitle import AssSubtitle
 from YTDown.Sub.srt.SrtSubtitle import SrtSubtitle
 from YTDown.Sub.txt.TxtSubtitle import TxtSubtitle
-from YTDown.utils import customizemessage
+from YTDown.utils import customizemessage, bytetomb
 from YTDown.Bot.command import getlangfromuser, gettypefromuser
+from YTDown.Drive.drive import uploadfile
+from YTDown.Drive.db.db import DB_SUB_FOLDER_ID
+import os
 
 import asyncio
 
@@ -22,6 +26,7 @@ class SubQuery:
         # filter vars
 
         self._lang = None
+        self._sub_type = None
 
         self._setflags()
 
@@ -29,12 +34,13 @@ class SubQuery:
         self._caption_list = self._ytsub.captions
 
         self._thumbnail = self._ytsub.thumbnail_url
-        self._sub_title = self._ytsub.title
+        self._sub_title = self._ytsub.title.replace("/", "")
+        self._sub_dir = None
+        self._fileid = None
 
         self._exact_caption = None
 
         self._sub = None
-        self._sub_type = None
 
     def _setflags(self):
         """
@@ -63,7 +69,6 @@ class SubQuery:
         if self._lang is not None:
             for caption in self._caption_list:
                 if caption.code == self._lang:
-                    print("hello")
                     self._exact_caption = caption
             if self._exact_caption is None:
                 self.shownocaption()
@@ -80,7 +85,6 @@ class SubQuery:
     def selectlangmessage(self):
         message = "Nomor|Bahasa|\n"
         for number, caption in enumerate(self._caption_list):
-            # print(caption.__dict__)
             message += "{}|{} ({})|\n".format(number + 1, caption.name, caption.code)
         message = customizemessage(message)
         message = "```{}```".format(message)
@@ -103,17 +107,65 @@ class SubQuery:
         )
 
     def download(self):
-        print("downloading file")
-
         if not self._query.iscancelled():
-            print(self._sub_type)
             if self._sub_type == "ass":
-                print('getting ass')
                 self._sub = AssSubtitle(self._exact_caption.url)
             elif self._sub_type == "srt":
                 self._sub = SrtSubtitle(self._exact_caption.url)
             elif self._sub_type == "txt":
                 self._sub = TxtSubtitle(self._exact_caption.url)
+
+        print('sub created')
+
+        self._savefile()
+        self._uploadfile()
+
+    def _savefile(self):
+        self._sub_title = "{} -{}.{}".format(
+            self._sub_title, self._lang, self._sub_type
+        )
+
+        print(self._sub_title)
+
+        self._sub_dir = "../cache/sub/{}/{}".format(
+            self._sub_type, self._sub_title
+        )
+        is_file_exist = os.path.exists(self._sub_dir)
+
+        if not is_file_exist:
+            try:
+                f = open(self._sub_dir, 'w', encoding='utf-8')
+                f.write(self._sub.subtitle)
+                f.close()
+            except Exception as error:
+                print(error)
+
+    def _uploadfile(self):
+        if bytetomb(os.path.getsize(self._sub_dir)) <= 8.0:
+            asyncio.run_coroutine_threadsafe(
+                self._message.channel.send("sending file... please wait"),
+                self._current_loop
+            )
+
+            print(self._sub_title)
+            asyncio.run_coroutine_threadsafe(
+                self._message.channel.send(file=File(self._sub_dir, self._sub_title)),
+                self._current_loop
+            )
+        else:
+            asyncio.run_coroutine_threadsafe(
+                self._message.channel.send("sending to drive... please wait"),
+                self._current_loop
+            )
+
+            self._fileid = uploadfile(self._sub_dir, DB_SUB_FOLDER_ID)['id']
+            asyncio.run_coroutine_threadsafe(self._message.channel.send(
+                "https://drive.google.com/u/0/uc?id={}&export=download".format(self._fileid)
+            ), self._current_loop)
+
+            self._period_list.addperiod(self._fileid)
+
+        print("saved in local")
 
     def getflags(self):
         return {
@@ -122,13 +174,10 @@ class SubQuery:
         }
 
     def getlanglength(self):
-        print(len(self._caption_list))
         return len(self._caption_list)
 
     def setlangfromuser(self, usernumber):
-        print(usernumber)
         for number, caption in enumerate(self._caption_list):
-            print(usernumber, number)
             if usernumber == number:
                 self._lang = caption.code
 
@@ -144,6 +193,5 @@ class SubQuery:
             self.selecttypemessage()
             self._query.setqueryfunction(gettypefromuser)
         else:
-            print('hallo')
             self.get_exact_caption()
             self.download()
