@@ -1,5 +1,5 @@
 from pytube import YouTube
-from .utils import customizemessage, bytetomb
+from YTDown.utils import customizemessage, bytetomb
 from discord import File
 from YTDown.Drive.drive import uploadfile
 from YTDown.Drive.db.db import DB_VIDEO_FOLDER_ID
@@ -72,7 +72,6 @@ class VideoQuery:
     def _showlist(self):
         message = "Nomor|Tipe|Resolusi|Ukuran|\n"
         for number, data in enumerate(self._video_list):
-            print(data)
             message += "{}|{}|{}|{}|\n".format(number + 1, data.subtype, data.resolution, bytetomb(data.filesize))
         message = customizemessage(message)
         message = "```{}```".format(message)

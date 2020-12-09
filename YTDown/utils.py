@@ -7,7 +7,6 @@ def customizemessage(message):
     for line in lines:
         texts = line.split('|')
         texts.pop()
-        print(texts)
         for text_index, text in enumerate(texts):
             if len(text) > text_length[text_index]:
                 text_length[text_index] = len(text)
