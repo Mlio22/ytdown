@@ -1,0 +1,9 @@
+BOT_TOKEN = 'DISCORD BOT TOKEN'
+FOLDER_ID = {
+    'main': "GD PARENT FOLDER ID",
+    'sub': "GD SUB FOLDER ID",
+    'video': "GD VIDEO FOLDER ID",
+    'all': "GD ALL FOLDER ID"
+}
+
+SAVED_FILES_ID = "1CvMpk37c8uN1HpvcNyNQQbEIZ8gsi5hJ"
