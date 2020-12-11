@@ -37,11 +37,13 @@ class VideoQuery:
         for flag in self._flags:
             if flag.startswith("-res="):
                 self._res = flag.split('-res=')[1]
-            if flag.startswith("-outputtype="):
-                self._output_type = flag.split("-outputtype=")[1]
+            if flag.startswith("-videotype="):
+                self._output_type = flag.split("-videotype=")[1]
 
     def _filterlist(self):
         # filter to progressive type only
+        # todo: gabungkan file audio dan video secara manual (non progressive)
+        print(self._video_list)
         self._video_list = self._video_list.filter(progressive=True)
 
         if self._res is not None:
@@ -69,6 +71,10 @@ class VideoQuery:
         self._exact_video = self._video_list[index]
         self._video_title += "-{}".format(self._exact_video.resolution)
 
+    def downloadfirstvideo(self):
+        self.setexactvideo(0)
+        self.download()
+
     def _showlist(self):
         message = "Nomor|Tipe|Resolusi|Ukuran|\n"
         for number, data in enumerate(self._video_list):
@@ -79,7 +85,8 @@ class VideoQuery:
         asyncio.run_coroutine_threadsafe(self._message.channel.send(message), self._current_loop)
 
     def _shownone(self):
-        asyncio.run_coroutine_threadsafe(self._message.channel.send("No data available"), self._current_loop)
+        asyncio.run_coroutine_threadsafe(self._message.channel.send("No video available"), self._current_loop)
+        self._query.videofinished()
 
     def download(self):
         print("downloading file")
@@ -97,7 +104,6 @@ class VideoQuery:
 
     def upload(self):
         if not self._query.iscancelled():
-            print("uploading")
             if bytetomb(self._exact_video.filesize) <= 8.0:
                 asyncio.run_coroutine_threadsafe(
                     self._message.channel.send("sending file... please wait"),
@@ -121,3 +127,4 @@ class VideoQuery:
                 ), self._current_loop)
 
                 self._period_list.addperiod(self._fileid)
+            self._query.videofinished()

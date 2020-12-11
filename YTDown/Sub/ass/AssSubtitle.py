@@ -92,9 +92,4 @@ class AssSubtitle(Subtitle):
             )
             karaoke_iter += 1
         self._subtitle = self.__header + self.__stylelist + self.__eventlist
-        try:
-            f = open("ochame kinou.ass", 'w', encoding='utf-8')
-            f.write(self._subtitle)
-            f.close()
-        except Exception as error:
-            print(error)
+

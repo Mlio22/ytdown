@@ -51,8 +51,8 @@ class SubQuery:
             if flag.startswith('-lang='):
                 lang = flag.split('-lang=')[1]
                 self.setlang(lang)
-            if flag.startswith('-type='):
-                subtype = flag.split('-type=')[1]
+            if flag.startswith('-subtype='):
+                subtype = flag.split('-subtype=')[1]
                 self.setsubtype(subtype)
 
     def setlang(self, lang):
@@ -75,7 +75,7 @@ class SubQuery:
 
     def shownocaption(self):
         asyncio.run_coroutine_threadsafe(
-            self._message.channel.send("caption unavailable"),
+            self._message.channel.send("No caption available"),
             self._current_loop
         )
 
@@ -139,6 +139,7 @@ class SubQuery:
                 f.close()
             except Exception as error:
                 print(error)
+        print("saved in local")
 
     def _uploadfile(self):
         if bytetomb(os.path.getsize(self._sub_dir)) <= 8.0:
@@ -164,8 +165,7 @@ class SubQuery:
             ), self._current_loop)
 
             self._period_list.addperiod(self._fileid)
-
-        print("saved in local")
+        self._query.subfinished()
 
     def getflags(self):
         return {
