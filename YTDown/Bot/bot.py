@@ -1,7 +1,6 @@
 from discord import Game
 from discord.ext.commands import Bot
 from .query import Query, Queries
-from .fetchcommand import fetchyoutubevideoedata, fetchyoutubesubdata
 from YTDown.Drive.period import PeriodList
 import asyncio
 from threading import Thread
@@ -15,6 +14,28 @@ period_list = PeriodList()
 loop = asyncio.get_event_loop()
 
 
+# pre-command functions
+def deleteprevquery(message):
+    query = query_list.checkuserquery(message)
+    if query:
+        query_list.deletequery(query)
+
+
+def addquery(message, url, flags, querytype):
+    Query(
+        message.author,
+        {
+            'period_list': period_list,
+            'query_list': query_list,
+            'message': message,
+            'url': url,
+            'flags': flags,
+            'current_loop': loop
+        },
+        querytype
+    )
+
+
 # command lists
 
 # get video
@@ -23,26 +44,9 @@ async def video(ctx, url, *flags):
     print("accepting video task")
     message = ctx.message
 
-    def fetchvideodata(currentloop):
-        # checking user in query
-        query = query_list.checkuserquery(message)
-        if query:
-            query_list.deletequery(query)
+    deleteprevquery(message)
 
-        Query(
-            message.author,
-            properties={
-                'period_list': period_list,
-                'query_list': query_list,
-                'message': message,
-                'url': url,
-                'flags': flags,
-                'current_loop': currentloop
-            },
-            startfunction=fetchyoutubevideoedata
-        )
-
-    thread = Thread(target=fetchvideodata(loop), args=(loop,), daemon=True)
+    thread = Thread(target=addquery(message, url, flags, 'video'), daemon=True)
     thread.start()
 
 
@@ -51,26 +55,21 @@ async def sub(ctx, url, *flags):
     print("accepting subtitle task")
     message = ctx.message
 
-    def fetchsubdata(currentloop):
-        query = query_list.checkuserquery(message)
-        if query:
-            query_list.deletequery(query)
+    deleteprevquery(message)
 
-        Query(
-            message.author,
-            properties={
-                'period_list': period_list,
-                'query_list': query_list,
-                'message': message,
-                'url': url,
-                'flags': flags,
-                'current_loop': currentloop
-            },
-            startfunction=fetchyoutubesubdata
-        )
-
-    thread = Thread(target=fetchsubdata(loop), args=(loop,), daemon=True)
+    thread = Thread(target=addquery(message, url, flags, 'sub'), daemon=True)
     thread.start()
+
+
+@client.command()
+async def alls(ctx, url, *flags):
+    print("acceptiong alls task")
+    message = ctx.message
+
+    deleteprevquery(message)
+
+    thread0 = Thread(target=addquery(message, url, flags, 'alls'), daemon=True)
+    thread0.start()
 
 
 # cancel previous query

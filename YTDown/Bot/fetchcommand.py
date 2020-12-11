@@ -3,9 +3,10 @@ from YTDown.Video.video import VideoQuery
 from YTDown.Sub.sub import SubQuery
 from .command import getvideoorder
 
+
 # video functions
 
-def fetchyoutubevideoedata(query):
+def fetchyoutubevideodata(query):
     properties = query.getproperties()
     querylist = properties['query_list']
     if querylist.checkquery(query):
@@ -21,11 +22,16 @@ def fetchyoutubevideoedata(query):
 
         if not query.iscancelled():
             query.setproperty('video', video)
+            video_list_length = video.getlistlength()
 
-            if video.getlistlength() > 0:
+            if video_list_length > 1:
                 query.setqueryfunction(getvideoorder)
 
-            video.showinfo()
+            if video_list_length != 1:
+                video.showinfo()
+            else:
+                video.downloadfirstvideo()
+
 
 def fetchyoutubesubdata(query):
     properties = query.getproperties()
