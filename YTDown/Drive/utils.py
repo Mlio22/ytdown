@@ -1,37 +1,12 @@
 from YTDown.Drive.drive import drive
-
-
-def createfolder(name):
-    folder = drive.CreateFile({
-        'title': name,
-        'mimeType': "application/vnd.google-apps.folder"
-    })
-    folder.Upload()
-
-    return folder
-
-
-def createfile(name, permissions=None, parentid=None):
-    file = drive.CreateFile({
-        'title': name,
-        'parents': [{'id': parentid}]
-    })
-
-    if permissions is not None:
-        file.InsertPermission(permissions)
-
-    file.Upload()
-    return file
+import os
 
 
 def searchorcreatedrivebyid(fileid):
+    """
+    searches a Google drive file or creates it if don't exist
+    :param fileid:
+    :return: a google drive file object (dict)
+    """
     file = drive.CreateFile({'id': fileid})
     return file
-
-
-def deletebyid(fileid):
-    try:
-        file = drive.CreateFile({'id': fileid})
-        file.Delete()
-    finally:
-        pass
