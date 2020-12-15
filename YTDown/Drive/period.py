@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from YTDown.Drive.db.db import savedpreviousfiles, db_file
 from YTDown.Drive.drive import deletebyid, deletebyname
 from threading import Timer
@@ -45,13 +45,13 @@ class Period:
         sets timer's timeout
         :return: None
         """
-        time_now = datetime.now()
 
-        if self.__timestamp != '':
-            self.__deltatime = (self.__timestamp - time_now).total_seconds()
-
-        if self.__timestamp is None or self.__deltatime < 0:
+        if self.__timestamp is None:
+            # new periods
             self.__deltatime = self._default_cache_time_minutes * 60
+        else:
+            time_now = datetime.now()
+            self.__deltatime = (self.__timestamp - time_now).total_seconds()
 
     def __settimer(self):
         """
@@ -83,12 +83,12 @@ class GDPeriod(Period):
 
 
 class LocalPeriod(Period):
-    def __init__(self, periodlist, filename, timestamp):
-        self.__filename = filename
+    def __init__(self, periodlist, filepath, timestamp):
+        self.__filepath = filepath
         super().__init__(periodlist, LOCAL_CACHE_DELETION_MINUTES, timestamp)
 
     def _timercallback(self):
-        self._period_list.removeperiod(self, filename=self.__filename)
+        self._period_list.removeperiod(self, filepath=self.__filepath)
 
 
 class PeriodList:
@@ -117,26 +117,36 @@ class PeriodList:
             print(parsedfile)
             self.__addperiod(
                 parsedfile['fileid'],
-                parsedfile['filename'],
+                parsedfile['filepath'],
                 parsedfile['timestampgd'],
                 parsedfile['timestamplocal']
             )
 
-    def __addperiod(self, fileid, filename, timestampgd, timestamplocal):
+    def __addperiod(self, fileid, filepath, timestampgd, timestamplocal):
         """
         the inner function
         sets the GDperiod and LocalPeriod strictly
 
+        if fileid exist, that means the query uses GD
+        but query always use local cache
+
         :param fileid: the id of GD file (str)
-        :param filename: the name of file (str)
+        :param filepath: the path of file (str)
         :param timestampgd: the previous timestamp for the GD file (str)
         :param timestamplocal: the previous timestamp for the local cache (str)
         :return: None
         """
-        self._periods.append(GDPeriod(self, fileid, timestampgd))
-        self._periods.append(LocalPeriod(self, filename, timestamplocal))
 
-    def addnewperiod(self, filetype, fileid, filename, timestampgd=datetime.now(), timestamplocal=datetime.now()):
+        # don't set periods to previously terminated period
+
+        if fileid is not None and timestampgd != 'None':
+            self._periods.append(GDPeriod(self, fileid, timestampgd))
+
+        if timestamplocal != 'None':
+            self._periods.append(LocalPeriod(self, filepath, timestamplocal))
+
+    def addnewperiod(self, filetype, filepath, fileid=None, timestampgd=None, timestamplocal=None):
+        print(filetype, filepath, fileid)
         """
         usually called in video or sub function to create new period using the inner __addperiod
 
@@ -147,56 +157,59 @@ class PeriodList:
         """
         print("creating period")
 
-        # set to only file's name and format
-        filename = filename.replace(
-            "C:\\Users\\Acer\\Documents\\TELKOM TUGAS\\python_dev\\ytdown-dc-bot\\YTDown\\Bot\\../cache/video/",
-            ""
-        )
-
         # rewriting the db file
-        self.__addtodbfile(filetype, fileid, filename, timestampgd, timestamplocal)
+        self.__addtodbfile(filetype, fileid, filepath, timestampgd, timestamplocal)
         # creating 2 periods for a file
-        self.__addperiod(fileid, filename, timestampgd, timestamplocal)
+        self.__addperiod(fileid, filepath, timestampgd, timestamplocal)
 
-    def __addtodbfile(self, filetype, fileid, filename, timestampgd, timestamplocal):
+    def __addtodbfile(self, filetype, fileid, filepath, timestampgd, timestamplocal):
         """
         adds a period to periodlist and rewrites the db file
         """
         print("start adding to db file")
+
+        if timestampgd is None and fileid is not None:
+            timestampgd = datetime.now() + timedelta(minutes=GD_CACHE_DELETION_MINUTES)
+
+        if timestamplocal is None:
+            timestamplocal = datetime.now() + timedelta(minutes=LOCAL_CACHE_DELETION_MINUTES)
+
         self._parsedsavedfiles.append({
             'filetype': filetype,
             'fileid': fileid,
-            'filename': filename,
+            'filepath': filepath,
             'timestampgd': timestampgd,
             'timestamplocal': timestamplocal
         })
 
         self.__rewritedbfile()
 
-    def removeperiod(self, period, fileid=None, filename=None):
+    def removeperiod(self, period, fileid=None, filepath=None):
         """
         removes a period from periodlist and rewrites the db file
         :return:
         """
         # checks is period in list
         for parsedfile in self._parsedsavedfiles:
-            if parsedfile['fileid'] == fileid:
+            if parsedfile['fileid'] == fileid and fileid is not None:
                 parsedfile['timestampgd'] = None
                 deletebyid(fileid)
                 print("gd file removed")
-            elif parsedfile['filename'] == filename:
+            elif parsedfile['filepath'] == filepath and filepath is not None:
                 parsedfile['timestamplocal'] = None
-                deletebyname(parsedfile['filetype'], filename)
+                deletebyname(filepath)
                 print("local file deleted")
 
             if parsedfile['timestampgd'] is None and parsedfile['timestamplocal'] is None:
-                print("file deleted")
-                self._parsedsavedfiles.remove(parsedfile)
+                try:
+                    self._parsedsavedfiles.remove(parsedfile)
+                finally:
+                    print("file deleted")
 
         try:
             self._periods.remove(period)
-        finally:
-            pass
+        except ValueError:
+            print("period already deleted")
 
         self.__rewritedbfile()
 
@@ -205,14 +218,13 @@ class PeriodList:
         rewrites the db file
 
         the db file format is just like this:
-        filetype|fileid|filename|timestamp for GD|timestamp for local
+        filetype|fileid|filepath|timestamp for GD|timestamp for local
         """
 
         print("start to updating db file")
 
         file_content = ""
         for index, parsedfile in enumerate(self._parsedsavedfiles):
-            print(parsedfile)
             if index > 0:
                 file_content += "\n"
 
@@ -226,7 +238,7 @@ class PeriodList:
             file_content += "{}|{}|{}|{}|{}".format(
                 parsedfile['filetype'],
                 parsedfile['fileid'],
-                parsedfile['filename'],
+                parsedfile['filepath'],
                 gdtime,
                 localtime
             )

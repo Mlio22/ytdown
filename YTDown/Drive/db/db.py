@@ -37,7 +37,7 @@ def savedpreviousfiles():
     if saved_data != "":
         saved_data_lists = saved_data.split('\n')
         for saved_data_list in saved_data_lists:
-            filetype, fileid, filename, timestampgd, timestamplocal = saved_data_list.split('|')
+            filetype, fileid, filepath, timestampgd, timestamplocal = saved_data_list.split('|')
 
             if timestampgd != 'None':
                 timestampgd = datetime.strptime(timestampgd, "%d %m %y %H:%M:%S")
@@ -52,7 +52,7 @@ def savedpreviousfiles():
             parsedlist.append({
                 'filetype': filetype,
                 'fileid': fileid,
-                'filename': filename,
+                'filepath': filepath,
                 'timestampgd': timestampgd,
                 'timestamplocal': timestamplocal
             })
@@ -62,5 +62,5 @@ def savedpreviousfiles():
 
 # debug
 if __name__ == "__main__":
-    db_file.SetContentString("A")
+    db_file.SetContentString("")
     db_file.Upload()

@@ -1,5 +1,4 @@
 from YTDown.Drive.drive import drive
-import os
 
 
 def searchorcreatedrivebyid(fileid):

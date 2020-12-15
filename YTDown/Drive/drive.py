@@ -35,20 +35,19 @@ def deletebyid(fileid):
     try:
         file = drive.CreateFile({'id': fileid})
         file.Delete()
-    finally:
+    except Exception as error:
         pass
 
 
-def deletebyname(filetype, filename):
+def deletebyname(filepath):
     """
-    deletes local cache file by its filetype and filename
+    deletes local cache file by its filepath
 
-    :param filetype: type of the file, opt: video/sub (str)
+    :param filepath: name of the file (str)
     :return: None
     """
+
     try:
-        file_dir = "C:/Users/Acer/Documents/TELKOM TUGAS/python_dev/ytdown-dc-bot/YTDown/Bot/../cache/{}/{}".format(
-            filetype, filename)
-        os.remove(file_dir)
-    except FileNotFoundError:
-        pass
+        os.remove(filepath)
+    except FileNotFoundError as error:
+        print(error)
