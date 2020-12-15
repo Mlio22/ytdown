@@ -1,197 +1,185 @@
-from pytube import YouTube
-from discord import File
+import os
+from YTDown.Bot.requestquery import RequestQuery
 from YTDown.Sub.ass.AssSubtitle import AssSubtitle
 from YTDown.Sub.srt.SrtSubtitle import SrtSubtitle
 from YTDown.Sub.txt.TxtSubtitle import TxtSubtitle
-from YTDown.utils import customizemessage, bytetomb
 from YTDown.Bot.command import getlangfromuser, gettypefromuser
-from YTDown.Drive.drive import uploadfile
 from YTDown.Drive.db.db import DB_SUB_FOLDER_ID
-import os
-
-import asyncio
+from YTDown.utils import customizemessage, bytetomb
 
 SUB_TYPES = ['ass', 'srt', 'txt']
 
 
-class SubQuery:
-    def __init__(self, message, suburl, flags, periodlist, query, currentloop):
-        self._message = message
-        self._sub_url = suburl
-        self._flags = flags
-        self._period_list = periodlist
-        self._query = query
-        self._current_loop = currentloop
+class SubQuery(RequestQuery):
+    def __init__(self, message, videourl, flags, periodlist, query, currentloop):
+        super().__init__(message, videourl, flags, periodlist, query, currentloop)
 
-        # filter vars
+        # request-related vars
+        self._gd_folderid = DB_SUB_FOLDER_ID
+        self._request_type = 'sub'
 
-        self._lang = None
-        self._sub_type = None
+        # query props
+        self._list = self._youtube_object.captions
 
+        # filter flags
+        self.__lang_flag = None
+        self.__sub_type_flag = None
+
+        # subtitle props
+        self.__lang = None
+        self.__sub_type = None
+
+        # parsed caption
+        self.__subtitle = None
+
+        # filter captions
         self._setflags()
 
-        self._ytsub = YouTube(self._sub_url)
-        self._caption_list = self._ytsub.captions
-
-        self._thumbnail = self._ytsub.thumbnail_url
-        self._sub_title = self._ytsub.title.replace("/", "")
-        self._sub_dir = None
-        self._fileid = None
-
-        self._exact_caption = None
-
-        self._sub = None
-
     def _setflags(self):
-        """
-        set language and type by the flags
-        :return: Nothing
-        """
         for flag in self._flags:
             if flag.startswith('-lang='):
                 lang = flag.split('-lang=')[1]
-                self.setlang(lang)
+                self.__setlang(lang)
             if flag.startswith('-subtype='):
                 subtype = flag.split('-subtype=')[1]
-                self.setsubtype(subtype)
+                self.__setsubtype(subtype)
 
-    def setlang(self, lang):
+    def __setlang(self, lang):
         """
         filter
         :param lang:
         :return:
         """
 
-        self._lang = lang
+        self.__lang = lang
 
-    def get_exact_caption(self):
-        print(self._lang)
-        if self._lang is not None:
-            for caption in self._caption_list:
-                if caption.code == self._lang:
-                    self._exact_caption = caption
-            if self._exact_caption is None:
-                self.shownocaption()
+    def __setsubtype(self, subtype):
+        self.__sub_type = subtype
 
-    def shownocaption(self):
-        asyncio.run_coroutine_threadsafe(
-            self._message.channel.send("No caption available"),
-            self._current_loop
-        )
+    def getexactcaption(self):
+        """
+        gets the exact caption from user's response to be parsed
+        :return: None
+        """
+        if self.__lang is not None:
+            for caption in self._list:
+                if caption.code == self.__lang:
+                    self._exact = caption
+            if self._exact is None:
+                self.__shownocaption()
 
-    def setsubtype(self, subtype):
-        self._sub_type = subtype
+    def __shownocaption(self):
+        """
+        Informs user that no caption available on that query
+        :return: None
+        """
+        self._sendtexttodiscord("No caption available")
 
-    def selectlangmessage(self):
+    def __selectlangmessage(self):
+        """
+        Informs user list of languages that available on that query
+        and set query function to wait user's pick
+        :return:
+        """
         message = "Nomor|Bahasa|\n"
-        for number, caption in enumerate(self._caption_list):
+        for number, caption in enumerate(self._list):
             message += "{}|{} ({})|\n".format(number + 1, caption.name, caption.code)
         message = customizemessage(message)
         message = "```{}```".format(message)
 
-        asyncio.run_coroutine_threadsafe(
-            self._message.channel.send(message),
-            self._current_loop
-        )
+        self._sendtexttodiscord(message)
 
-    def selecttypemessage(self):
+        # sets query function
+        self._query.setqueryfunction(getlangfromuser)
+
+    def __selecttypemessage(self):
+        """
+        Informs user the list of subtitle types available
+        and sets query function to wait user's pick
+        :return:None
+        """
         message = "Nomor|Tipe Subtitle|\n"
         for number, _ in enumerate(SUB_TYPES):
             message += "{}|{}|\n".format(number + 1, SUB_TYPES[number])
         message = customizemessage(message)
         message = "```{}```".format(message)
 
-        asyncio.run_coroutine_threadsafe(
-            self._message.channel.send(message),
-            self._current_loop
-        )
+        self._sendtexttodiscord(message)
+
+        # sets query function
+        self._query.setqueryfunction(gettypefromuser)
+
+    def getlanglength(self):
+        return len(self._list)
+
+    def setlangfromuser(self, usernumber):
+        for number, caption in enumerate(self._list):
+            if usernumber == number:
+                self.__setlang(caption.code)
+
+    def settypefromuser(self, usernumber):
+        self.__setsubtype(SUB_TYPES[usernumber])
+
+    def checksubrequirements(self):
+        if self.__lang is None:
+            self.__selectlangmessage()
+        elif self.__sub_type is None:
+            self.__selecttypemessage()
+        else:
+            self.getexactcaption()
+            self.download()
 
     def download(self):
+        """
+        downloads the caption, saves it, and then uploads it
+        :return: None
+        """
+        self.__parsecaption()
+        self._savefile()
+        self._upload()
+
+        self._query.subfinished()
+
+    def __parsecaption(self):
+        """
+        downloads the caption and parses it
+        :return:
+        """
         if not self._query.iscancelled():
-            if self._sub_type == "ass":
-                self._sub = AssSubtitle(self._exact_caption.url)
-            elif self._sub_type == "srt":
-                self._sub = SrtSubtitle(self._exact_caption.url)
-            elif self._sub_type == "txt":
-                self._sub = TxtSubtitle(self._exact_caption.url)
+            if self.__sub_type == "ass":
+                self.__subtitle = AssSubtitle(self._exact.url)
+            elif self.__sub_type == "srt":
+                self.__subtitle = SrtSubtitle(self._exact.url)
+            elif self.__sub_type == "txt":
+                self.__subtitle = TxtSubtitle(self._exact.url)
 
         print('sub created')
 
-        self._savefile()
-        self._uploadfile()
-
     def _savefile(self):
-        self._sub_title = "{} -{}.{}".format(
-            self._sub_title, self._lang, self._sub_type
-        )
+        """
+        saves subtitle file to cache
+        :return: None
+        """
+        if not self._query.iscancelled():
+            # sets filename of subtitle
+            SUB_DIR = "C:\\Users\\Acer\\Documents\\TELKOM TUGAS\\python_dev\\ytdown-dc-bot\\YTDown\\cache\\sub\\{}\\"\
+                .format(self.__sub_type)
 
-        print(self._sub_title)
+            self._filename = "{}-{}.{}".format(self._youtube_title, self.__lang, self.__sub_type).replace("/", "").replace("\\", "")
+            self._filepath = "{}{}".format(SUB_DIR, self._filename)
 
-        self._sub_dir = "../cache/sub/{}/{}".format(
-            self._sub_type, self._sub_title
-        )
-        is_file_exist = os.path.exists(self._sub_dir)
+            print(self._filepath)
 
-        if not is_file_exist:
-            try:
-                f = open(self._sub_dir, 'w', encoding='utf-8')
-                f.write(self._sub.subtitle)
-                f.close()
-            except Exception as error:
-                print(error)
-        print("saved in local")
+            is_file_exist = os.path.exists(self._filepath)
+            print(self._filepath, self.__subtitle.subtitle)
 
-    def _uploadfile(self):
-        if bytetomb(os.path.getsize(self._sub_dir)) <= 8.0:
-            asyncio.run_coroutine_threadsafe(
-                self._message.channel.send("sending file... please wait"),
-                self._current_loop
-            )
+            if not is_file_exist:
+                try:
+                    f = open(self._filepath, 'w', encoding='utf-8')
+                    f.write(self.__subtitle.subtitle)
+                    f.close()
+                except Exception as error:
+                    print(error)
 
-            print(self._sub_title)
-            asyncio.run_coroutine_threadsafe(
-                self._message.channel.send(file=File(self._sub_dir, self._sub_title)),
-                self._current_loop
-            )
-        else:
-            asyncio.run_coroutine_threadsafe(
-                self._message.channel.send("sending to drive... please wait"),
-                self._current_loop
-            )
-
-            self._fileid = uploadfile(self._sub_dir, DB_SUB_FOLDER_ID)['id']
-            asyncio.run_coroutine_threadsafe(self._message.channel.send(
-                "https://drive.google.com/u/0/uc?id={}&export=download".format(self._fileid)
-            ), self._current_loop)
-
-            self._period_list.addperiod(self._fileid)
-        self._query.subfinished()
-
-    def getflags(self):
-        return {
-            "lang": self._lang,
-            "type": self._sub_type
-        }
-
-    def getlanglength(self):
-        return len(self._caption_list)
-
-    def setlangfromuser(self, usernumber):
-        for number, caption in enumerate(self._caption_list):
-            if usernumber == number:
-                self._lang = caption.code
-
-    def settypefromuser(self, usernumber):
-        self.setsubtype(SUB_TYPES[usernumber])
-
-    def checksubrequirements(self):
-        print(self._lang, self._sub_type)
-        if self._lang is None:
-            self.selectlangmessage()
-            self._query.setqueryfunction(getlangfromuser)
-        elif self._sub_type is None:
-            self.selecttypemessage()
-            self._query.setqueryfunction(gettypefromuser)
-        else:
-            self.get_exact_caption()
-            self.download()
+            self._filesize = bytetomb(os.path.getsize(self._filepath))
+            print("saved in local")

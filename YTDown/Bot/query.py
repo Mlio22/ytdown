@@ -107,6 +107,8 @@ class Query:
             try:
                 thread.join()
                 print("thread terminated")
+            except RuntimeError:
+                pass
             finally:
                 pass
 

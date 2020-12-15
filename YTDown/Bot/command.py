@@ -19,8 +19,8 @@ def getvideoorder(query):
 
                 downloadthread.start()
 
-        finally:
-            return None
+        except Exception as error:
+            print(error)
 
 
 def getlangfromuser(query):
@@ -30,10 +30,8 @@ def getlangfromuser(query):
         message_text = properties['message'].content
 
         try:
-            print("here")
             message_text = int(message_text) - 1
             if message_text <= sub_query.getlanglength():
-                print("here")
                 sub_query.setlangfromuser(message_text)
                 sub_query.checksubrequirements()
         finally:

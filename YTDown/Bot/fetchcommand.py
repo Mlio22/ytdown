@@ -1,7 +1,5 @@
-import asyncio
 from YTDown.Video.video import VideoQuery
 from YTDown.Sub.sub import SubQuery
-from .command import getvideoorder
 
 
 # video functions
@@ -22,15 +20,7 @@ def fetchyoutubevideodata(query):
 
         if not query.iscancelled():
             query.setproperty('video', video)
-            video_list_length = video.getlistlength()
-
-            if video_list_length > 1:
-                query.setqueryfunction(getvideoorder)
-
-            if video_list_length != 1:
-                video.showinfo()
-            else:
-                video.downloadfirstvideo()
+            video.showinfo()
 
 
 def fetchyoutubesubdata(query):

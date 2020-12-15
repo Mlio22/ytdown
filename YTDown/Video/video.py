@@ -1,130 +1,94 @@
-from pytube import YouTube
-from YTDown.utils import customizemessage, bytetomb
-from discord import File
-from YTDown.Drive.drive import uploadfile
+from YTDown.Bot.requestquery import RequestQuery
+from YTDown.Bot.command import getvideoorder
 from YTDown.Drive.db.db import DB_VIDEO_FOLDER_ID
-import asyncio
+from YTDown.utils import customizemessage, bytetomb
 
 
-class VideoQuery:
+class VideoQuery(RequestQuery):
     def __init__(self, message, videourl, flags, periodlist, query, currentloop):
-        self._message = message
-        self._video_url = videourl
-        self._flags = flags
-        self._period_list = periodlist
-        self._query = query
-        self._current_loop = currentloop
+        super().__init__(message, videourl, flags, periodlist, query, currentloop)
 
-        # filter vars
+        # request-related vars
+        self._gd_folderid = DB_VIDEO_FOLDER_ID
+        self._request_type = 'video'
 
-        self._res = None
-        self._output_type = None
-        self._exact_video = None
-        self._file_path = None
-        self._fileid = None
+        # query props
+        self._list = self._youtube_object.streams
 
+        # filter flags
+        self.__res_flag = None
+        self.__output_type_flag = None
+
+        # video props
+        self.__video_resolution = None
+
+        # filter videos
         self._setflags()
-
-        self._yt_video = YouTube(self._video_url)
-
-        self._video_list = self._yt_video.streams
-        self._thumbnail = self._yt_video.thumbnail_url
-        self._video_title = self._yt_video.title
-
-        self._filterlist()
+        self.__filterlist()
 
     def _setflags(self):
         for flag in self._flags:
             if flag.startswith("-res="):
-                self._res = flag.split('-res=')[1]
+                self._res_flag = flag.split('-res=')[1]
             if flag.startswith("-videotype="):
-                self._output_type = flag.split("-videotype=")[1]
+                self._output_type_flag = flag.split("-videotype=")[1]
 
-    def _filterlist(self):
+    def __filterlist(self):
         # filter to progressive type only
         # todo: gabungkan file audio dan video secara manual (non progressive)
-        print(self._video_list)
-        self._video_list = self._video_list.filter(progressive=True)
+        self._list = self._list.filter(progressive=True)
 
-        if self._res is not None:
-            self._video_list = self._video_list.filter(res=self._res)
+        if self.__res_flag is not None:
+            self._list = self._list.filter(res=self.__res_flag)
 
-        if self._output_type is not None:
-            self._video_list = self._video_list.filter(subtype=self._output_type)
+        if self.__output_type_flag is not None:
+            self._list = self._list.filter(subtype=self.__output_type_flag)
 
     def showinfo(self):
-        if len(self._video_list) > 0:
-            self._showlist()
+        if len(self._list) > 0:
+            self.__showlist()
+            self._query.setqueryfunction(getvideoorder)
         else:
-            self._shownone()
-
-    def setcurrentloop(self, currentloop):
-        self._current_loop = currentloop
-
-    def getcurrentloop(self):
-        return self._current_loop
+            self.__shownovideo()
 
     def getlistlength(self):
-        return len(self._video_list)
+        return len(self._list)
 
     def setexactvideo(self, index):
-        self._exact_video = self._video_list[index]
-        self._video_title += "-{}".format(self._exact_video.resolution)
+        print("lol1")
+        self._exact = self._list[index]
+        self.__video_resolution = self._exact.resolution
+        self._filesize = bytetomb(self._exact.filesize)
 
-    def downloadfirstvideo(self):
-        self.setexactvideo(0)
-        self.download()
+        # set file name
+        self._filename = "{}-{}".format(self._youtube_title, self.__video_resolution).replace("/", "").replace("\\", "")
 
-    def _showlist(self):
+    def __showlist(self):
         message = "Nomor|Tipe|Resolusi|Ukuran|\n"
-        for number, data in enumerate(self._video_list):
+        for number, data in enumerate(self._list):
             message += "{}|{}|{}|{}|\n".format(number + 1, data.subtype, data.resolution, bytetomb(data.filesize))
         message = customizemessage(message)
         message = "```{}```".format(message)
 
-        asyncio.run_coroutine_threadsafe(self._message.channel.send(message), self._current_loop)
+        self._sendtexttodiscord(message)
 
-    def _shownone(self):
-        asyncio.run_coroutine_threadsafe(self._message.channel.send("No video available"), self._current_loop)
+    def __shownovideo(self):
+        self._sendtexttodiscord("No video available")
         self._query.videofinished()
 
     def download(self):
-        print("downloading file")
+        self._savefile()
+        self._upload()
 
+        self._query.videofinished()
+
+    def _savefile(self):
         if not self._query.iscancelled():
-            self._file_path = self._exact_video.download(
-                skip_existing=False,
-                output_path="../cache",
-                filename=self._video_title
+            self._filepath = self._exact.download(
+                skip_existing=True,
+                output_path="../cache/video/",
+                filename=self._filename
             )
 
             print("downloaded")
 
-            self.upload()
-
-    def upload(self):
-        if not self._query.iscancelled():
-            if bytetomb(self._exact_video.filesize) <= 8.0:
-                asyncio.run_coroutine_threadsafe(
-                    self._message.channel.send("sending file... please wait"),
-                    self._current_loop
-                )
-
-                asyncio.run_coroutine_threadsafe(
-                    self._message.channel.send(file=File(self._file_path)),
-                    self._current_loop
-                )
-            else:
-                asyncio.run_coroutine_threadsafe(
-                    self._message.channel.send("sending to drive... please wait"),
-                    self._current_loop
-                )
-
-                self._fileid = uploadfile(self._file_path, DB_VIDEO_FOLDER_ID)['id']
-                print("uplaoded")
-                asyncio.run_coroutine_threadsafe(self._message.channel.send(
-                    "https://drive.google.com/u/0/uc?id={}&export=download".format(self._fileid)
-                ), self._current_loop)
-
-                self._period_list.addperiod(self._fileid)
-            self._query.videofinished()
