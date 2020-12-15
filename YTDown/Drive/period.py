@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from YTDown.Drive.db.db import savedpreviousfiles, db_file
+from YTDown.Drive.db.db import savedpreviousfiles, rewritedbfile
 from YTDown.Drive.drive import deletebyid, deletebyname
 from threading import Timer
 from abc import abstractmethod
@@ -103,7 +103,6 @@ class PeriodList:
         """
 
         self._periods = []
-        self._db_file = db_file
 
         # gets previous saved files whose not deleted before
         # and saves the upcoming new period
@@ -138,7 +137,6 @@ class PeriodList:
         """
 
         # don't set periods to previously terminated period
-
         if fileid is not None and timestampgd != 'None':
             self._periods.append(GDPeriod(self, fileid, timestampgd))
 
@@ -146,7 +144,6 @@ class PeriodList:
             self._periods.append(LocalPeriod(self, filepath, timestamplocal))
 
     def addnewperiod(self, filetype, filepath, fileid=None, timestampgd=None, timestamplocal=None):
-        print(filetype, filepath, fileid)
         """
         usually called in video or sub function to create new period using the inner __addperiod
 
@@ -200,11 +197,12 @@ class PeriodList:
                 deletebyname(filepath)
                 print("local file deleted")
 
-            if parsedfile['timestampgd'] is None and parsedfile['timestamplocal'] is None:
-                try:
-                    self._parsedsavedfiles.remove(parsedfile)
-                finally:
-                    print("file deleted")
+            if parsedfile['timestampgd'] is None or parsedfile['timestampgd'] == 'None':
+                if parsedfile['timestamplocal'] is None or parsedfile['timestamplocal'] == 'None':
+                    try:
+                        self._parsedsavedfiles.remove(parsedfile)
+                    finally:
+                        print("file deleted")
 
         try:
             self._periods.remove(period)
@@ -229,10 +227,10 @@ class PeriodList:
                 file_content += "\n"
 
             gdtime, localtime = None, None
-            if parsedfile['timestampgd']:
+            if parsedfile['timestampgd'] and parsedfile['timestampgd'] != 'None':
                 gdtime = parsedfile['timestampgd'].strftime("%d %m %y %H:%M:%S")
 
-            if parsedfile['timestamplocal']:
+            if parsedfile['timestamplocal'] and parsedfile['timestamplocal'] != 'None':
                 localtime = parsedfile['timestamplocal'].strftime("%d %m %y %H:%M:%S")
 
             file_content += "{}|{}|{}|{}|{}".format(
@@ -243,8 +241,7 @@ class PeriodList:
                 localtime
             )
 
-        # sets the GD database file and reuploads it
-        self._db_file.SetContentString(file_content)
-        self._db_file.Upload()
+        # rewrites the db file
+        rewritedbfile(file_content)
 
         print("file updated")
