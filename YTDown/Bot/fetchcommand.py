@@ -18,7 +18,7 @@ def fetchyoutubevideodata(query):
             properties['current_loop']
         )
 
-        if not query.iscancelled or not query.isinprocess:
+        if not query.iscancelled:
             query.setproperty('video', video)
             video.showinfo()
 

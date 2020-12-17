@@ -93,7 +93,14 @@ class Query:
         run the query function
         :return: None
         """
-        self.__query_function(self)
+        if self.__query_function is not None:
+            print("running query function")
+            self.__query_function(self)
+        else:
+            print("query is on process")
+
+    def removequeryfunction(self):
+        self.__query_function = None
 
     """
     a query has a threads that should be controlled
@@ -121,13 +128,6 @@ class Query:
     def __commitsuicide(self):
         self.__properties['query_list'].deletequery(self)
 
-    @property
-    def isinprocess(self):
-        return self.__isinprocess
-
-    @isinprocess.setter
-    def isinprocess(self, status):
-        self.__isinprocess = status
 
 class Queries:
     def __init__(self):
@@ -141,7 +141,10 @@ class Queries:
 
     def deletequery(self, query):
         query.cancelthreads()
-        self._queries.remove(query)
+        try:
+            self._queries.remove(query)
+        finally:
+            print("query deleted")
 
     def checkuserquery(self, message):
         for query in self._queries:

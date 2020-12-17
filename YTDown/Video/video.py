@@ -36,7 +36,7 @@ class VideoQuery(RequestQuery):
     def __filterlist(self):
         # filter to progressive type only
         # todo: gabungkan file audio dan video secara manual (non progressive)
-        # self._list = self._list.filter(progressive=True)
+        self._list = self._list.filter(progressive=True)
 
         if self.__res_flag is not None:
             self._list = self._list.filter(res=self.__res_flag)
@@ -55,7 +55,8 @@ class VideoQuery(RequestQuery):
         return len(self._list)
 
     def setexactvideo(self, index):
-        print("lol1")
+        self._query.removequeryfunction()
+
         self._exact = self._list[index]
         self.__video_resolution = self._exact.resolution
         self._filesize = bytetomb(self._exact.filesize)

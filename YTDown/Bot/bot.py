@@ -19,6 +19,7 @@ def deleteprevquery(message):
     query = query_list.checkuserquery(message)
     if query:
         query_list.deletequery(query)
+        print("previous query deleted")
 
 
 def addquery(message, url, flags, querytype):
@@ -98,7 +99,6 @@ async def on_message(message):
         query = query_list.checkuserquery(message)
         if query:
             query.setproperty('message', message)
-            print("running thread")
 
             thread = Thread(target=query.runqueryfunction, daemon=True)
             query.addthread(thread)

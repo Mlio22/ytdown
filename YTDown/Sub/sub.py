@@ -119,11 +119,14 @@ class SubQuery(RequestQuery):
         return len(self._list)
 
     def setlangfromuser(self, usernumber):
+        self._query.removequeryfunction()
+
         for number, caption in enumerate(self._list):
             if usernumber == number:
                 self.__setlang(caption.code)
 
     def settypefromuser(self, usernumber):
+        self._query.removequeryfunction()
         self.__setsubtype(SUB_TYPES[usernumber])
 
     def checksubrequirements(self):
