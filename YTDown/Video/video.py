@@ -36,7 +36,7 @@ class VideoQuery(RequestQuery):
     def __filterlist(self):
         # filter to progressive type only
         # todo: gabungkan file audio dan video secara manual (non progressive)
-        self._list = self._list.filter(progressive=True)
+        # self._list = self._list.filter(progressive=True)
 
         if self.__res_flag is not None:
             self._list = self._list.filter(res=self.__res_flag)
@@ -61,7 +61,11 @@ class VideoQuery(RequestQuery):
         self._filesize = bytetomb(self._exact.filesize)
 
         # set file name
-        self._filename = "{}-{}".format(self._youtube_title, self.__video_resolution).replace("/", "").replace("\\", "")
+        self._filename = "{}-{}.{}".format(
+            self._youtube_title,
+            self.__video_resolution,
+            self._exact.subtype
+        ).replace("/", "").replace("\\", "")
 
     def __showlist(self):
         message = "Nomor|Tipe|Resolusi|Ukuran|\n"
@@ -77,18 +81,25 @@ class VideoQuery(RequestQuery):
         self._query.videofinished()
 
     def download(self):
-        self._savefile()
-        self._upload()
+        VIDEO_DIR = "C:\\Users\\Acer\\Documents\\TELKOM TUGAS\\python_dev\\ytdown-dc-bot\\YTDown\Bot\../cache/video/"
+        self._filepath = "{}{}".format(VIDEO_DIR, self._filename)
 
-        self._query.videofinished()
+        print(self._filepath)
+
+        super().download()
 
     def _savefile(self):
-        if not self._query.iscancelled():
+        if not self._query.iscancelled:
             self._filepath = self._exact.download(
                 skip_existing=True,
                 output_path="../cache/video/",
-                filename=self._filename
+                filename=self._filename.replace(self._exact.subtype, "")
             )
 
+            print(self._filepath)
+
             print("downloaded")
+
+    def _queryfinished(self):
+        self._query.videofinished()
 

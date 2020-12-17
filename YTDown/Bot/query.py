@@ -10,6 +10,7 @@ class Query:
 
         self.__query_function = None
         self.__iscancelled = False
+        self.__isinprocess = False
 
         self.__is_video_finished = False
         self.__is_sub_finished = False
@@ -64,6 +65,7 @@ class Query:
         self.dotask()
 
     def subfinished(self):
+        print("Subtitle finished")
         self.__is_sub_finished = True
         self.dotask()
     """
@@ -107,17 +109,25 @@ class Query:
             try:
                 thread.join()
                 print("thread terminated")
-            except RuntimeError:
-                pass
+            except RuntimeError as error:
+                print(error)
             finally:
                 pass
 
+    @property
     def iscancelled(self):
         return self.__iscancelled
 
     def __commitsuicide(self):
         self.__properties['query_list'].deletequery(self)
 
+    @property
+    def isinprocess(self):
+        return self.__isinprocess
+
+    @isinprocess.setter
+    def isinprocess(self, status):
+        self.__isinprocess = status
 
 class Queries:
     def __init__(self):

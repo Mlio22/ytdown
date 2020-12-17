@@ -1,8 +1,10 @@
 import asyncio
+import os
 from abc import abstractmethod
 from pytube import YouTube
 from discord import File
 from YTDown.Drive.drive import uploadfile
+from YTDown.utils import bytetomb
 
 
 class RequestQuery:
@@ -32,6 +34,9 @@ class RequestQuery:
         # query props
         self._list = None
         self._exact = None
+        self._isperiodexist = False
+        self._isgdperiodterminated = False
+        self._islocalperiodterminated = False
 
     @abstractmethod
     def _setflags(self):
@@ -41,31 +46,66 @@ class RequestQuery:
         """
         pass
 
-    @abstractmethod
     def download(self):
-        pass
+        [
+            self._isperiodexist,
+            self._fileid,
+            self._isgdperiodterminated,
+            self._islocalperiodterminated
+        ] = self._period_list.isperiodexist(self._filepath)
+
+        # check file size
+        if self._isperiodexist:
+            self._filesize = bytetomb(os.path.getsize(self._filepath))
+            print("cached file size: ", self._filesize)
+
+        if not self._isperiodexist or self._islocalperiodterminated:
+            print("saving file")
+            self._savefile()
+
+        self._upload()
+
+        if self._isperiodexist:
+            if self._isgdperiodterminated or self._islocalperiodterminated:
+                self._period_list.deletepreviousandcreatenewperiod(
+                    self._request_type,
+                    self._filepath,
+                    self._fileid
+                )
+            else:
+                self._period_list.extendperiod(self._filepath)
+        else:
+            self._startperiod()
+
+        self._queryfinished()
 
     @abstractmethod
     def _savefile(self):
         pass
+
+    def _startperiod(self):
+        if not self._query.iscancelled:
+            self._period_list.addnewperiod(self._request_type, self._filepath, self._fileid)
 
     def _upload(self):
         """
         Uploads subtitle to discord or drive if the size is beyond 8MB
         :return:None
         """
-        if not self._query.iscancelled():
+        if not self._query.iscancelled:
             if self._filesize <= 8.0:
                 self._sendtexttodiscord("sending file to discord")
                 self._sendfiletodiscord(self._filepath, self._filename)
             else:
                 self._sendtexttodiscord("sending to drive... please wait")
 
-                self._fileid = uploadfile(self._filepath, self._gd_folderid)['id']
+                if not self._isperiodexist or self._isgdperiodterminated:
+                    self._fileid = uploadfile(self._filepath, self._gd_folderid)['id']
                 self._sendgdlinktodiscord(self._fileid)
 
-        if not self._query.iscancelled():
-            self._period_list.addnewperiod(self._request_type, self._filepath, self._fileid)
+    @abstractmethod
+    def _queryfinished(self):
+        pass
 
     def _sendtexttodiscord(self, text):
         asyncio.run_coroutine_threadsafe(

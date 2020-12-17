@@ -65,6 +65,12 @@ class SubQuery(RequestQuery):
             for caption in self._list:
                 if caption.code == self.__lang:
                     self._exact = caption
+                    self._filename = "{}-{}.{}".format(
+                        self._youtube_title,
+                        self.__lang,
+                        self.__sub_type
+                    ).replace("/", "").replace("\\", "")
+
             if self._exact is None:
                 self.__shownocaption()
 
@@ -134,18 +140,20 @@ class SubQuery(RequestQuery):
         downloads the caption, saves it, and then uploads it
         :return: None
         """
-        self.__parsecaption()
-        self._savefile()
-        self._upload()
+        # sets filename of subtitle
+        SUB_DIR = "C:\\Users\\Acer\\Documents\\TELKOM TUGAS\\python_dev\\ytdown-dc-bot\\YTDown\\cache\\sub\\" \
+            .format(self.__sub_type)
 
-        self._query.subfinished()
+        self._filepath = "{}{}\\{}".format(SUB_DIR, self.__sub_type, self._filename)
+
+        super().download()
 
     def __parsecaption(self):
         """
         downloads the caption and parses it
         :return:
         """
-        if not self._query.iscancelled():
+        if not self._query.iscancelled:
             if self.__sub_type == "ass":
                 self.__subtitle = AssSubtitle(self._exact.url)
             elif self.__sub_type == "srt":
@@ -160,20 +168,12 @@ class SubQuery(RequestQuery):
         saves subtitle file to cache
         :return: None
         """
-        if not self._query.iscancelled():
-            # sets filename of subtitle
-            SUB_DIR = "C:\\Users\\Acer\\Documents\\TELKOM TUGAS\\python_dev\\ytdown-dc-bot\\YTDown\\cache\\sub\\{}\\"\
-                .format(self.__sub_type)
 
-            self._filename = "{}-{}.{}".format(self._youtube_title, self.__lang, self.__sub_type).replace("/", "").replace("\\", "")
-            self._filepath = "{}{}".format(SUB_DIR, self._filename)
-
-            print(self._filepath)
-
+        if not self._query.iscancelled:
             is_file_exist = os.path.exists(self._filepath)
-            print(self._filepath, self.__subtitle.subtitle)
 
             if not is_file_exist:
+                self.__parsecaption()
                 try:
                     f = open(self._filepath, 'w', encoding='utf-8')
                     f.write(self.__subtitle.subtitle)
@@ -183,3 +183,6 @@ class SubQuery(RequestQuery):
 
             self._filesize = bytetomb(os.path.getsize(self._filepath))
             print("saved in local")
+
+    def _queryfinished(self):
+        self._query.subfinished()

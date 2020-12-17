@@ -18,7 +18,7 @@ def fetchyoutubevideodata(query):
             properties['current_loop']
         )
 
-        if not query.iscancelled():
+        if not query.iscancelled or not query.isinprocess:
             query.setproperty('video', video)
             video.showinfo()
 
@@ -37,6 +37,6 @@ def fetchyoutubesubdata(query):
             currentloop=properties['current_loop']
         )
 
-        if not query.iscancelled():
+        if not query.iscancelled:
             query.setproperty('sub', sub)
             sub.checksubrequirements()
